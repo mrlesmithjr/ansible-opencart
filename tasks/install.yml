@@ -29,6 +29,11 @@
     recurse: true
   become: true
 
+- name: install | Checking If OpenCart Has Been Successfully Setup
+  stat:
+    path: "{{ opencart_default_webroot }}/.opencart_setup"
+  register: _opencart_setup
+
 - name: install | Installing OpenCart Using PHP Installer
   command: >
            php {{ opencart_webroot }}/install/cli_install.php install
@@ -43,11 +48,18 @@
            --http_server http://{{ opencart_listen_address }}/
   become: true
   register: _opencart_installed
-  when: _opencart_db_created['changed']
+  when: not _opencart_setup['stat']['exists']
 
 - name: install | Removing OpenCart Install Directory
   file:
     dest: "{{ opencart_webroot }}/install"
     state: absent
+  become: true
+  when: _opencart_installed['changed']
+
+- name: install | Marking OpenCart As Being Installed
+  file:
+    path: "{{ opencart_default_webroot }}/.opencart_setup"
+    state: touch
   become: true
   when: _opencart_installed['changed']
